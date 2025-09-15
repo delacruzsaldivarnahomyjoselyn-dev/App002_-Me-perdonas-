@@ -1,0 +1,69 @@
+import flet as ft
+import firebase_admin
+from firebase_admin import credentials, firestore
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+# Inicializar conexión con Firebase
+cred = credentials.Certificate("credenciales/servicio.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+def main(page: ft.Page):
+    page.title = "CRUD con Flet y Firebase"
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.window_width = 900
+    page.window_height = 600
+    page.scroll = "auto"
+
+    # Campos de entrada
+    nombre = ft.TextField(label="Nombre", width=300)
+    correo = ft.TextField(label="Correo", width=300)
+    telefono = ft.TextField(label="Teléfono", width=300)
+
+    # Tabla para mostrar datos
+    tabla = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("ID")),
+            ft.DataColumn(ft.Text("Nombre")),
+            ft.DataColumn(ft.Text("Correo")),
+            ft.DataColumn(ft.Text("Teléfono")),
+            ft.DataColumn(ft.Text("Acciones"))
+        ],
+        rows=[]
+    )
+
+    # Contenedor principal
+    page.add(
+        ft.Column(
+            controls=[
+                ft.Row([nombre, correo, telefono]),
+                ft.ElevatedButton("Agregar", icon=ft.icons.ADD, on_click=lambda e: agregar_dato(nombre.value, correo.value, telefono.value, tabla, page)),
+                ft.Divider(),
+                tabla
+            ]
+        )
+    )
+
+ft.app(target=main)
+
+def agregar_dato(nombre, correo, telefono, tabla, page):
+    if nombre.strip() == "" or correo.strip() == "" or telefono.strip() == "":
+        page.snack_bar = ft.SnackBar(ft.Text("Todos los campos son obligatorios"), open=True)
+        page.update()
+        return
+
+    # Guardar en Firebase
+    ref = db.reference("usuarios")
+    nuevo_registro = ref.push({
+        "nombre": nombre,
+        "correo": correo,
+        "telefono": telefono
+    })
+
+    # Actualizar tabla
+    cargar_datos(tabla, page)
+    page.snack_bar = ft.SnackBar(ft.Text("Registro agregado correctamente"), open=True)
+    page.update()
+
+    
